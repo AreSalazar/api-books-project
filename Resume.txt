@@ -1,0 +1,7 @@
+--------------------------------Creación de migraciones-------------------------------
+1.Dudas con el many-to-many
+Se creó una tabla pivote (books_category) para que esto pueda ser posible.
+Las tablas pivote son solo una relación, nada más, por eso solo tiene llaves foráneas
+Un libro puede tener varias categorías, la tabla original de categories y la pivote que es book_category. 
+A diferencia del lenguaje, un libro solo puede tener 1 lenguaje. Por ello se colocó en la tabla books de una vez, sin necesidad de crear una pivote.
+Language no es una pivote, por lo que lleva modelo y a veces controller, en este caso será solo modelo.
