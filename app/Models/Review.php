@@ -3,10 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\User;
+use App\Models\Book;
 
 class Review extends Model
 {
-    //
+    //use HasFactory; se usa para tests y seeders, para probar
+
     protected $fillable = [
         'rating',
         'comment',
@@ -16,6 +19,7 @@ class Review extends Model
         'book_id'
     ];
 
+    //$casts convierte datos en int al traerlos de la BD
     protected $casts = [
         'rating' => 'integer',
         'user_id' => 'integer',
