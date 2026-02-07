@@ -3,13 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use Exception;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Carbon; //Librería para manejar fechas y horas (tokens y expiraciones)
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class UserController extends Controller
 {
@@ -17,14 +16,14 @@ class UserController extends Controller
     public function register(Request $request)
     {
         try {
-
             //Se validan los datos de la petición
             $request->validate([
-                'name' => 'required|string|max:255|unique:users|alpha|min:8|regex:/^[A-Za-z]+$/',
-                'email' => 'requited|string|email|max:255|unique:users',
+                'name' => 'required|string|min:3|max:255|unique:users|alpha',
+                'email' => 'required|string|email|max:255|unique:users',
                 'password' => 'required|confirmed|min:8'
-            ]);
+            ]); //Laravel devuelve automáticamente error 422 (Datos inválidos)
 
+            //Se crea el registro de un nuevo usuario
             $user = User::create([
                 'name' => $request->name,
                 'email' => $request->email,
@@ -37,22 +36,16 @@ class UserController extends Controller
                 'status' => 'success'
             ], 201); //CREATED
 
-        } catch (ValidationException $val) {
-            return response()->json([
-                'message' => 'invalid data',
-                'error' => $val->getMessage()
-            ], 422); //DATOS NO VÁLIDOS
-
         } catch (QueryException $exc) {
             return response()->json([
                 'message' => 'Database error registering user',
                 'error' => $exc->getMessage()
             ], 409); //CONFLICTO
 
-        } catch (Exception $error) {
+        } catch (Throwable $th) {
             return response()->json([
                 'message' => 'Failed to register user',
-                'error' => $error->getMessage()
+                'error' => $th->getMessage()
             ], 500); //ERROR EN EL SERVIDOR
         }
     }
@@ -67,7 +60,7 @@ class UserController extends Controller
             ]);
 
             //Se extrae (only) solo los datos que vamos a usar del body de la petición
-            $credentials = $request->only('email', 'password');
+            $credentials = $request->only('email', 'password'); //$credentials = $request->all());
 
             //Autenticar al usuario con las credenciales
             if (Auth::attempt($credentials)) { //Auth::attempt devuelve true o flase, dependiendo si las credenciales son correctas
@@ -75,10 +68,12 @@ class UserController extends Controller
                 //Credenciales correctas, se obtiene el usuario
                 $user = $request->user(); //$user = Auth::user();
 
-                //Tiempo de expiración del token
+                //Tiempo de expiración del token 
                 $expiration = Carbon::now()->addMinutes(30);
-                //Generación de token
+                //Generación de token (Sanctum)
                 $token = $user->createToken('auth_token', ['server:update'], $expiration)->plainTextToken;
+                //$expiration = Carbon::now()->addMinutes(30);
+                //$token=$user->createToken('authentication_token',[], $expiration)->plainTextToken;
 
                 return response()->json([
                     'message' => 'User logged successfully',
@@ -94,16 +89,11 @@ class UserController extends Controller
                     'status' => 401
                 ], 401); //No autorizado
             }
-        } catch (ValidationException $val) {
-            return response()->json([
-                'message' => 'invalid data',
-                'error' => $val->getMessage()
-            ], 422); //DATOS NO VÁLIDOS
 
-        } catch (Exception $error) {
+        } catch (Throwable $th) {
             return response()->json([
                 'message' => 'Failed to register user',
-                'error' => $error->getMessage()
+                'error' => $th->getMessage()
             ], 500); //ERROR EN EL SERVIDOR
         }
     }
@@ -115,18 +105,18 @@ class UserController extends Controller
             //Se obtiene el usuario logueado
             $user = $request->user();
 
-            //Revocar token, usuario debe generar otro
+            //Revocar token actual, usuario debe generar otro
             $user->currentAccessToken()->delete();
 
             return response()->json([
-                'message' => 'User logged successfully',
+                'message' => 'User logged out successfully',
                 'status' => 200
             ], 200); //OK
 
-        } catch (Exception $exc) {
+        } catch (Throwable $th) {
             return response()->json([
                 'message' => 'Failed to logged out',
-                'error' => $exc->getMessage()
+                'error' => $th->getMessage()
             ], 500); //ERROR DEL SERVIDOR
         }
     }
