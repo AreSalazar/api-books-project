@@ -71,22 +71,19 @@ class UserController extends Controller
                 //Tiempo de expiración del token 
                 $expiration = Carbon::now()->addMinutes(30);
                 //Generación de token (Sanctum)
-                $token = $user->createToken('auth_token', ['server:update'], $expiration)->plainTextToken;
-                //$expiration = Carbon::now()->addMinutes(30);
-                //$token=$user->createToken('authentication_token',[], $expiration)->plainTextToken;
+                $token = $user->createToken('auth_token', ['server:update'], $expiration)->plainTextToken; //sirve para roles/admin
+                //$token=$user->createToken('authentication_token',[], $expiration)->plainTextToken; //sirve para usuarios normales
 
                 return response()->json([
                     'message' => 'User logged successfully',
                     'user' => $user,
                     'type_token' => 'Bearer', //Para postman
                     'token' => $token,
-                    'status' => 200
                 ], 200); //OK
 
             } else {
                 return response()->json([
                     'message' => 'unauthorized',
-                    'status' => 401
                 ], 401); //No autorizado
             }
 
@@ -110,7 +107,6 @@ class UserController extends Controller
 
             return response()->json([
                 'message' => 'User logged out successfully',
-                'status' => 200
             ], 200); //OK
 
         } catch (Throwable $th) {

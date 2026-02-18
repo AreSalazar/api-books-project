@@ -13,7 +13,7 @@ class Language extends Model
         'code'
     ];
 
-    public function book(){
+    public function books(){
         //Un lenguaje → muchos libros
         return $this->hasMany(Book::class);
     }
