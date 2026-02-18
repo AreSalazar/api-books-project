@@ -14,25 +14,17 @@ class ReviewController extends Controller
      */
     public function index($id)
     {
-        try {
-            //Se obtiene el libro
-            $book = Book::findOrFail($id);
+        //Se obtiene el libro
+        $book = Book::findOrFail($id);
 
-            //Obtiene todas las reviews del libro
-            $reviews = Review::where('book_id', $book->id)->with('user')->get();
+        //Obtiene todas las reviews del libro
+        $reviews = Review::where('book_id', $book->id)->with('user')->get();
 
-            return response()->json([
-                'data' => $reviews,
-                'message' => 'Review retrieved successfully',
-                'status' => 'success'
-            ], 200); //OK
-
-        } catch (Throwable $th) {
-            return response()->json([
-                'message' => 'Failed to retrieved reviews',
-                'error' => $th->getMessage()
-            ], 500); //ERROR DEL SERVIDOR
-        }
+        return response()->json([
+            'data' => $reviews,
+            'message' => 'Review retrieved successfully',
+            'status' => 'success'
+        ], 200); //OK
     }
 
     /**
@@ -48,41 +40,42 @@ class ReviewController extends Controller
      */
     public function store(Request $request, string $id)
     {
-        try {
-            //Validación de datos
-            $request->validate([
-                'rating' => 'required|integer|min:1|max:5',
-                'comment' => 'nullable|string'
-            ]);
+        //Validación de datos
+        $request->validate([
+            'rating' => 'required|integer|min:1|max:5',
+            'comment' => 'nullable|string'
+        ]);
 
-            //Se obtiene el libro
-            $book = Book::findOrFail($id);
+        //Se obtiene el libro
+        $book = Book::findOrFail($id);
 
-            //Se obtiene el id del usuario
-            $user_id = $request->user()->id; //$user_id = Auth::id();
+        //Se obtiene el id del usuario
+        $user_id = $request->user()->id; //$user_id = Auth::id();
 
-            //Se crea la review por parte del usuario con su respectivo id de libro y usuario
-            $review = Review::create([
-                'book_id' => $book->id,
-                'user_id' => $user_id,
-                'rating' => $request->rating,
-                'comment' => $request->comment
-            ]);
+        //Verificación si el usuario ya dejó review en este libro
+        $exists = Review::where('book_id', $book->id)->where('user_id', $user_id)->exists();
 
-            //Se muestra la review creada con mensajes de éxito
+        if ($exists) {
             return response()->json([
-                'data' => $review,
-                'message' => 'Review created successfully',
-                'status' => 'success'
-            ], 201); //CREADO
-
-        } catch (Throwable  $th) {
-            //Se muestra mensajes de error al fallar la creación de la review
-            return response()->json([
-                'message' => 'Failed to create review',
-                'error' => $th->getMessage(),
-            ], 500); //ERROR DEL SERVIDOR
+                'message' => 'You already reviewed this book',
+                'status' => 'error'
+            ], 409); //CONFLICTO
         }
+
+        //Se crea la review por parte del usuario con su respectivo id de libro y usuario
+        $review = Review::create([
+            'book_id' => $book->id,
+            'user_id' => $user_id,
+            'rating' => $request->rating,
+            'comment' => $request->comment
+        ]);
+
+        //Se muestra la review creada con mensajes de éxito
+        return response()->json([
+            'data' => $review,
+            'message' => 'Review created successfully',
+            'status' => 'success'
+        ], 201); //CREADO
     }
 
     /**
@@ -106,46 +99,37 @@ class ReviewController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        try {
-            //Validación de datos
-            $request->validate([
-                'rating' => 'required|integer|min:1|max:5',
-                'comment' => 'nullable|string'
-            ]);
+        //Validación de datos
+        $request->validate([
+            'rating' => 'required|integer|min:1|max:5',
+            'comment' => 'nullable|string'
+        ]);
 
-            //Se obtiene la review
-            $review = Review::findOrFail($id);
+        //Se obtiene la review
+        $review = Review::findOrFail($id);
 
-            //Se obtiene el usuario
-            $user_id = $request->user()->id;
+        //Se obtiene el usuario
+        $user_id = $request->user()->id;
 
-            //Si el id de la review no pertenece al id del usuario
-            if ($review->user_id !== $user_id) {
-                return response()->json([
-                    'error' => 'No authorized'
-                ], 403); //PROHIBIDO
-            }
-
-            //Actualización de datos parcialmente
-            $review->update([
-                'rating' => $request->rating ?? $review->rating,
-                'comment' => $request->comment ?? $review->comment
-            ]);
-
-            //Se muestra la review actualizada con mensajes de éxito
+        //Si el id de la review no pertenece al id del usuario
+        if ($review->user_id !== $user_id) {
             return response()->json([
-                'data' => $review,
-                'message' => 'Review updated successfully',
-                'status' => 'success'
-            ], 200); //OK
-
-        } catch (Throwable $th) {
-            //Se muestra mensajes de error al fallar la actualización
-            return response()->json([
-                'message' => 'Failed to update review',
-                'error' => $th->getMessage()
-            ], 500); //ERROR DEL SERVIDOR
+                'error' => 'No authorized'
+            ], 403); //PROHIBIDO
         }
+
+        //Actualización de datos parcialmente
+        $review->update([
+            'rating' => $request->rating ?? $review->rating,
+            'comment' => $request->comment ?? $review->comment
+        ]);
+
+        //Se muestra la review actualizada con mensajes de éxito
+        return response()->json([
+            'data' => $review,
+            'message' => 'Review updated successfully',
+            'status' => 'success'
+        ], 200); //OK
     }
 
     /**
@@ -153,56 +137,41 @@ class ReviewController extends Controller
      */
     public function destroy(Request $request, string $id)
     {
-        try {
-            //Se obtiene la review
-            $review = Review::findOrFail($id);
+        //Se obtiene la review
+        $review = Review::findOrFail($id);
 
-            //Se obtiene el usuario
-            $user_id = $request->user()->id;
+        //Se obtiene el usuario
+        $user_id = $request->user()->id;
 
-            //Si el id del usuario no pertenece al id de la review
-            if ($review->user_id !== $user_id) {
-                return response()->json([
-                    'error' => 'No authorized'
-                ], 403); //PROHIBIDO
-            }
-
-            //Elimina la review
-            $review->delete();
-
-            //Muestra mensaje de eliminación exitosa
+        //Si el id del usuario no pertenece al id de la review
+        if ($review->user_id !== $user_id) {
             return response()->json([
-                'message' => 'Review deleted successfully',
-                'status' => 'success'
-            ], 200); //OK
-
-        } catch (Throwable $th) {
-            return response()->json([
-                'message' => 'Failed to delete review',
-                'error' => $th->getMessage()
-            ], 500); //ERROR DEL SERVIDOR
+                'error' => 'No authorized'
+            ], 403); //PROHIBIDO
         }
+
+        //Elimina la review
+        $review->delete();
+
+        //Muestra mensaje de eliminación exitosa
+        return response()->json([
+            'message' => 'Review deleted successfully',
+            'status' => 'success'
+        ], 200); //OK
     }
 
     public function average(string $id)
     {
-        try {
-            //Se obtiene el libro
-            $book = Book::findOrFail($id);
+        //Se obtiene el libro
+        $book = Book::findOrFail($id);
 
-            //Se obtiene la calificación del libro
-            $avg_rating = Review::where('book_id', $book->id)->avg('rating'); //avg() es función SQL
+        //Se obtiene la calificación del libro
+        $avg_rating = Review::where('book_id', $book->id)->avg('rating'); //avg() es función SQL
 
-            //Muestra la calificación redondeada a 2 decimales del libro
-            return response()->json([
-                'book_id' => $book->id,
-                'avg_rating' => round($avg_rating, 2)
-            ]);
-        } catch (Throwable $th) {
-            return response()->json([
-                'mesage' => 'Failed to calculated the grade average',
-                'error' => $th->getMessage()
-            ], 500); //ERROR DEL SERVIDOR
-        }
+        //Muestra la calificación redondeada a 2 decimales del libro
+        return response()->json([
+            'book_id' => $book->id,
+            'avg_rating' => round($avg_rating, 2)
+        ]);
     }
 }

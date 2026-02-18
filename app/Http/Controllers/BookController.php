@@ -15,8 +15,8 @@ class BookController extends Controller
     public function index()
     {
         try {
-            //Carga el promedio de rating de la relación reviews
-            $books = Book::withAvg('reviews', 'rating')->get();
+            //withAvg carga el promedio de rating de la relación reviews
+            $books = Book::with(['language', 'categories'])->withAvg('reviews', 'rating')->get();//with también carga relaciones Para que el frontend tenga todo en una sola petición.
 
             return response()->json([
                 'data' => $books,
@@ -53,10 +53,11 @@ class BookController extends Controller
                 'author' => 'required|string|max:255',
                 'date' => 'required|numeric',
                 'price' => 'required|numeric',
+                'language_id' => 'required|exists:languages,id',
                 'image' => 'nullable|image|mimes:jpg,png,jpeg,webp,jfif|max:4096'
             ]); //Laravel devuelve automáticamente error 422 (Datos inválidos)
 
-            $data = $request->only(['title', 'sinopsis', 'author', 'date', 'price']);
+            $data = $request->only(['title', 'sinopsis', 'author', 'date', 'price','language_id']);
 
             //Determina si los datos cargados contienen un archivo
             if ($request->hasFile('image')) {
@@ -86,22 +87,14 @@ class BookController extends Controller
      */
     public function show(string $id)
     {
-        try {
-            //Se obtiene el libro
-            $book = Book::findOrFail($id);
+        //Se obtiene el libro
+        $book = Book::findOrFail($id);
 
-            return response()->json([
-                'data' => $book,
-                'message' => 'Product show succesfully',
-                'status' => 'success'
-            ], 200); //OK
-
-        } catch (Throwable) {
-            return response()->json([
-                'message' => 'Failed to show book',
-                'status' => 'error'
-            ], 500); //ERROR DEL SERVIDOR
-        }
+        return response()->json([
+            'data' => $book,
+            'message' => 'Product show succesfully',
+            'status' => 'success'
+        ], 200); //OK
     }
 
     /**
@@ -117,49 +110,41 @@ class BookController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        try {
-            //Se obtiene el libro
-            $book = Book::findOrFail($id);
+        //Se obtiene el libro
+        $book = Book::findOrFail($id);
 
-            //Se validan los datos de la petición
-            $request->validate([
-                'title' => 'required|string|max:255',
-                'sinopsis' => 'string',
-                'author' => 'required|string|max:255',
-                'date' => 'required|numeric',
-                'price' => 'required|numeric',
-                'image' => 'nullable|image|mimes:jpg,png,jpeg,webp,jfif|max:4096'
-            ]);
+        //Se validan los datos de la petición
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'sinopsis' => 'string',
+            'author' => 'required|string|max:255',
+            'date' => 'required|numeric',
+            'price' => 'required|numeric',
+            'image' => 'nullable|image|mimes:jpg,png,jpeg,webp,jfif|max:4096'
+        ]);
 
-            $data = $request->only(['title', 'sinopsis', 'author', 'date', 'price']);
+        $data = $request->only(['title', 'sinopsis', 'author', 'date', 'price']);
 
-            //Determina si los datos cargados contienen un archivo
-            if ($request->hasFile('image')) {
-                //Si el libro tiene una imagen guardada Y además el archivo existe en el storage público
-                if ($book->image && Storage::disk('public')->exists($book->image)) {
-                    //Borra el archivo físico del servidor
-                    Storage::disk('public')->delete($book->image);
-                }
-
-                //Guarda la imagen en storage/app/public/books
-                $data['image'] = $request->file('image')->store('books', 'public');
+        //Determina si los datos cargados contienen un archivo
+        if ($request->hasFile('image')) {
+            //Si el libro tiene una imagen guardada Y además el archivo existe en el storage público
+            if ($book->image && Storage::disk('public')->exists($book->image)) {
+                //Borra el archivo físico del servidor
+                Storage::disk('public')->delete($book->image);
             }
 
-            //Se actualiza los datos del libro
-            $book->update($data);
-
-            return response()->json([
-                'message' => 'Book updated successfully',
-                'data' => $book,
-                'status' => 'success'
-            ], 200); //OK
-
-        } catch (Throwable) {
-            return response()->json([
-                'message' => 'Failed to update book',
-                'status' => 'error'
-            ], 500); //ERROR DEL SERVIDOR
+            //Guarda la imagen en storage/app/public/books
+            $data['image'] = $request->file('image')->store('books', 'public');
         }
+
+        //Se actualiza los datos del libro
+        $book->update($data);
+
+        return response()->json([
+            'message' => 'Book updated successfully',
+            'data' => $book,
+            'status' => 'success'
+        ], 200); //OK
     }
 
     /**
@@ -167,29 +152,21 @@ class BookController extends Controller
      */
     public function destroy(string $id)
     {
-        try {
-            //Se obtiene el libro
-            $book = Book::findOrFail($id);
+        //Se obtiene el libro
+        $book = Book::findOrFail($id);
 
-            //Si el libro tiene una imagen guardada Y además el archivo existe en el storage público
-            if ($book->image && Storage::disk('public')->exists($book->image)) {
-                //Borra el archivo físico del servidor
-                Storage::disk('public')->delete($book->image);
-            }
-
-            //Se elimina el libro
-            $book->delete();
-
-            return response()->json([
-                'message' => 'Book deleted successfully',
-                'status' => 'success'
-            ], 200); //OK
-
-        } catch (Throwable) {
-            return response()->json([
-                'message' => 'Failed to delete book',
-                'status' => 'error'
-            ], 500); //ERROR DEL SERVIDOR
+        //Si el libro tiene una imagen guardada Y además el archivo existe en el storage público
+        if ($book->image && Storage::disk('public')->exists($book->image)) {
+            //Borra el archivo físico del servidor
+            Storage::disk('public')->delete($book->image);
         }
+
+        //Se elimina el libro
+        $book->delete();
+
+        return response()->json([
+            'message' => 'Book deleted successfully',
+            'status' => 'success'
+        ], 200); //OK
     }
 }

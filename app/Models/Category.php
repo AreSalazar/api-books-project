@@ -12,7 +12,7 @@ class Category extends Model
         'name'
     ];
 
-    public function book(){
+    public function books(){
         //Si en Book está belongsToMany(Category::class) entonces aquí es a la inversa
         //Una categoría → muchos libros
         return $this->belongsToMany(Book::class);
