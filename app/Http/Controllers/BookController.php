@@ -92,7 +92,7 @@ class BookController extends Controller
 
         return response()->json([
             'data' => $book,
-            'message' => 'Product show succesfully',
+            'message' => 'Book retrieved succesfully',
             'status' => 'success'
         ], 200); //OK
     }
@@ -115,7 +115,7 @@ class BookController extends Controller
 
         //Se validan los datos de la petición
         $request->validate([
-            'title' => 'required|string|max:255',
+            'title' => 'sometimes|string|max:255',
             'sinopsis' => 'string',
             'author' => 'required|string|max:255',
             'date' => 'required|numeric',
